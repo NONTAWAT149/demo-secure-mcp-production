@@ -168,6 +168,11 @@ def _render_status_box(title: str, message: str, style: str) -> None:
     )
 
 
+def _set_prompt_template(prompt_text: str) -> None:
+    """Update the shared prompt using a Streamlit-safe button callback."""
+    st.session_state.demo_prompt = prompt_text
+
+
 st.markdown(
     """
     <div class="hero">
@@ -192,12 +197,18 @@ with prompt_col:
 with action_col:
     st.write("")
     st.write("")
-    if st.button("Load Malicious", use_container_width=True):
-        st.session_state.demo_prompt = MALICIOUS_PROMPT
-        st.rerun()
-    if st.button("Load Safe", use_container_width=True):
-        st.session_state.demo_prompt = SAFE_PROMPT
-        st.rerun()
+    st.button(
+        "Load Malicious",
+        use_container_width=True,
+        on_click=_set_prompt_template,
+        args=(MALICIOUS_PROMPT,),
+    )
+    st.button(
+        "Load Safe",
+        use_container_width=True,
+        on_click=_set_prompt_template,
+        args=(SAFE_PROMPT,),
+    )
 
 tab_insecure, tab_secure = st.tabs(
     ["Insecure Production MCP", "Secure Production MCP"]
