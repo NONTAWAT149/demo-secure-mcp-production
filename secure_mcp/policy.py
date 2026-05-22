@@ -20,6 +20,8 @@ def check_policy(
     matched_rules = []
     tool_args = args or {}
 
+    # Unknown tools are denied first so later logic only runs for the demo's
+    # explicitly trusted capability set.
     if tool_name not in {
         "read_internal_docs",
         "send_email",
@@ -53,7 +55,7 @@ def check_policy(
             "risk_level": "medium",
             "matched_rules": matched_rules,
             "approval_required": False,
-        }
+            }
 
     if tool_name == "send_email":
         destination = str(tool_args.get("to", "")).strip().lower()
@@ -61,6 +63,7 @@ def check_policy(
         body = str(tool_args.get("body", ""))
         combined = f"{subject}\n{body}".lower()
 
+        # This rule models a hard block on obvious exfiltration destinations.
         if destination == "attacker@example.com":
             matched_rules.append("block_external_exfiltration_address")
             return {
@@ -71,6 +74,8 @@ def check_policy(
                 "approval_required": False,
             }
 
+        # The following content checks represent simple, explainable policy
+        # logic for the demo rather than a production classifier.
         if "confidential" in combined:
             matched_rules.append("block_confidential_email_content")
             return {
@@ -91,6 +96,8 @@ def check_policy(
                 "approval_required": False,
             }
 
+        # Least privilege is modeled as an approved tool list on the user
+        # context, independent of the prompt contents.
         if tool_name not in context.get("approved_tools", []):
             matched_rules.append("least_privilege_email_denied")
             return {
@@ -122,6 +129,7 @@ def check_policy(
 
     if tool_name == "export_customer_data":
         destination = str(tool_args.get("destination", "")).strip().lower()
+        # The demo treats non-internal destinations as external exports.
         is_external = destination and "internal" not in destination
 
         if is_external:

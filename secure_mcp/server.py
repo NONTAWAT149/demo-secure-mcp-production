@@ -39,6 +39,7 @@ def execute_governed_tool(
     context = DEFAULT_USER_CONTEXT.copy()
     context.update(user_context or {})
 
+    # Step 1: only known, trusted tools should be reachable through MCP.
     validation = validate_tool(tool_name)
     log_event(
         event_type="tool_validation",
@@ -61,6 +62,8 @@ def execute_governed_tool(
 
     dlp_result = None
     if tool_name == "send_email":
+        # Step 2: inspect outbound content before policy decides whether this
+        # action should be allowed.
         dlp_result = scan_for_sensitive_data(str(request_args.get("body", "")))
         log_event(
             event_type="dlp_scan",
@@ -75,6 +78,8 @@ def execute_governed_tool(
             args={"body": request_args.get("body", "")},
         )
 
+    # Step 3: apply authorization and policy rules using the request plus user
+    # context. This is the main security decision point in the demo.
     policy = check_policy(tool_name, request_args, context)
     log_event(
         event_type="policy_check",
@@ -95,6 +100,8 @@ def execute_governed_tool(
             "result": None,
         }
 
+    # Step 4: some actions are not auto-blocked, but they still require a
+    # human reviewer before the tool may run.
     needs_approval = policy.get("approval_required", False) or requires_human_approval(
         tool_name, request_args
     )
@@ -128,6 +135,8 @@ def execute_governed_tool(
                 "result": None,
             }
 
+    # Step 5: only after the governance checks pass do we call the underlying
+    # enterprise tool implementation.
     result = RAW_TOOL_HANDLERS[tool_name](**request_args)
     log_event(
         event_type="tool_execution",
@@ -150,6 +159,8 @@ def execute_governed_tool(
 
 @mcp.tool
 def read_internal_docs() -> str:
+    # The exposed MCP tool is thin by design; the security logic lives in the
+    # shared governance wrapper above.
     outcome = execute_governed_tool("read_internal_docs")
     return outcome["message"]
 

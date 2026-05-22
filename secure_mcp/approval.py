@@ -5,6 +5,7 @@ from secure_mcp.dlp import scan_for_sensitive_data
 
 def requires_human_approval(tool_name: str, args: dict) -> bool:
     """Return whether the tool request should go to human review."""
+    # Destructive or data-export actions are never fully automated in this demo.
     if tool_name in {"delete_records", "export_customer_data"}:
         return True
 
@@ -17,6 +18,8 @@ def requires_human_approval(tool_name: str, args: dict) -> bool:
 
 def simulate_human_approval(tool_name: str, args: dict) -> dict:
     """Deny dangerous actions for the demo."""
+    # The reviewer is intentionally conservative so the audience can see the
+    # approval checkpoint stop high-risk actions.
     if requires_human_approval(tool_name, args):
         return {
             "approved": False,

@@ -18,6 +18,8 @@ def _is_malicious_prompt(user_input: str) -> bool:
 
 def secure_agent(user_input: str) -> dict:
     """Simulate an agent working through a secure MCP governance layer."""
+    # Reset the in-memory audit trail for each run so the UI only shows events
+    # for the current scenario.
     clear_audit_log()
     architecture = "AI Agent -> Secure MCP Governance Layer -> Enterprise Tools"
 
@@ -39,6 +41,8 @@ def secure_agent(user_input: str) -> dict:
             "risk_level": "low",
         }
 
+    # The agent attempts the same sequence as the insecure version, but every
+    # sensitive action is routed through the governed MCP execution path.
     read_outcome = execute_governed_tool("read_internal_docs")
     confidential_data = read_outcome["result"] or ""
 
@@ -51,6 +55,8 @@ def secure_agent(user_input: str) -> dict:
         },
     )
 
+    # The UI consumes this normalized list to show which tool calls were
+    # allowed versus blocked and why.
     tool_calls = [
         {
             "tool": "read_internal_docs",

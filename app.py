@@ -14,6 +14,8 @@ st.set_page_config(
     layout="wide",
 )
 
+# The demo uses lightweight custom CSS so the insecure and secure paths feel
+# visually different without adding extra frontend components.
 st.markdown(
     """
     <style>
@@ -188,6 +190,8 @@ st.markdown("### Shared Prompt Input")
 prompt_col, action_col = st.columns([4, 1])
 with prompt_col:
     if "demo_prompt" not in st.session_state:
+        # Default to the malicious prompt so the first run immediately shows
+        # the security contrast between the two architectures.
         st.session_state.demo_prompt = MALICIOUS_PROMPT
     prompt = st.text_area(
         "Use the same prompt across both architectures.",
@@ -220,6 +224,7 @@ with tab_insecure:
         "The MCP layer acts as a transport mechanism only. No policy, DLP, approval, or audit controls are enforced.",
     )
     if st.button("Run Insecure Demo", type="primary", key="run_insecure"):
+        # This path deliberately bypasses all governance and shows the failure mode.
         st.session_state.insecure_result = insecure_agent(prompt)
 
     insecure_result = st.session_state.get("insecure_result")
@@ -250,6 +255,7 @@ with tab_secure:
         "The MCP layer enforces authorization, policy, DLP, audit logging, tool validation, approval, and least privilege before execution.",
     )
     if st.button("Run Secure Demo", type="primary", key="run_secure"):
+        # This path sends the same prompt through the governed MCP flow.
         st.session_state.secure_result = secure_agent(prompt)
 
     secure_result = st.session_state.get("secure_result")
@@ -283,6 +289,8 @@ with tab_secure:
         st.info("Run the secure demo to show the same attack being blocked by MCP governance.")
 
 if st.session_state.get("insecure_result") and st.session_state.get("secure_result"):
+    # Once both runs exist, show the outcomes side by side so the architecture
+    # difference is visible without switching tabs.
     st.markdown("### Side-by-Side Comparison")
     left, right = st.columns(2)
     with left:

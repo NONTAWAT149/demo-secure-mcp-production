@@ -18,6 +18,8 @@ _SENSITIVE_MARKERS = (
 def _mask_value(value) -> str:
     if isinstance(value, str):
         lowered = value.lower()
+        # The audit log keeps enough context to explain a decision while
+        # avoiding obvious sensitive payloads in the stored arguments.
         if any(marker in lowered for marker in _SENSITIVE_MARKERS) or len(value) > 80:
             return "[REDACTED]"
         return value

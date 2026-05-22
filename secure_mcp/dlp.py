@@ -14,6 +14,8 @@ def scan_for_sensitive_data(text: str) -> dict:
     findings = []
     lowered = text.lower()
 
+    # This intentionally uses simple keyword matching so the demo output is
+    # stable and easy to explain to a live audience.
     for pattern, description in SENSITIVE_PATTERNS.items():
         if pattern.lower() in lowered:
             findings.append(f"{pattern}: {description}")

