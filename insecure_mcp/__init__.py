@@ -1,0 +1,1 @@
+"""Insecure MCP demo package."""

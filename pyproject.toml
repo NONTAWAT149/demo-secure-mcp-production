@@ -1,0 +1,14 @@
+[project]
+name = "demo-agenticai-with-mcp"
+version = "0.1.0"
+description = "Streamlit demo showing insecure vs secure production MCP architecture"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit",
+    "fastmcp",
+    "mcp",
+]
+
+[tool.uv]
+package = false
